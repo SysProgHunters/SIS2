@@ -1,6 +1,6 @@
 # CPU usage monitor
 
-Using Timer monitor usage of CPU and create the graph of it
+Simple runnable application that shows all processors on machine, its usage and real-time bar graph of it.
 
 ## Getting Started
 
