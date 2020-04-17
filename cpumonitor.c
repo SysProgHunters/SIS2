@@ -24,7 +24,7 @@
 #include <sys/sysctl.h>         
 
 /******************************************************************
- * Utilities
+ * Utillities
  */
 
 #define MIN(a, b) ({                            \
