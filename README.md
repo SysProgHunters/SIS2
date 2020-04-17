@@ -8,81 +8,41 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
+Clone current repository to your local machine
 
 ```
-Give examples
+$ git clone https://github.com/SysProgHunters/SIS2
 ```
 
-### Installing
+### Building
 
-A step by step series of examples that tell you how to get a development env running
+You should go the directory where folder SIS2 is cloned.
 
-Say what the step will be
-
-```
-Give the example
-```
-
-And repeat
+Use following command to build runnable file.
 
 ```
-until finished
+$ make
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+Now your application is builded. Let's test it for an action 🔥.
 
-## Running the tests
+## Run
 
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
+Run it using command below.
 
 ```
-Give an example
+$ ./cpumonitor
 ```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+Since this project is done for educational purposes, feel free to contribute any part of code
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Dyussyumbayev Temirlan** - (https://github.com/bzzitsme)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+* **Sarybayev Ruslan**  - (https://github.com/rruss)
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+* **Zhangir Zhandauov**  - (https://github.com/zhandauov)
 
