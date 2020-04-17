@@ -28,7 +28,7 @@ Now your application is builded. Let's test it for an action 🔥.
 
 ## Run
 
-Run it using command below.
+Run it using the command below.
 
 ```
 $ ./cpumonitor
@@ -36,7 +36,7 @@ $ ./cpumonitor
 
 ## Contributing
 
-Since this project is done for educational purposes, feel free to contribute any part of code
+Since this project is done for educational purposes, feel free to contribute any part of code. However, our organization won't provide any warranties
 
 ## Authors
 
