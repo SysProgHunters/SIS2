@@ -16,16 +16,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <wchar.h>
-
 #include <curses.h>
 #include <term.h>
-
 #include <sys/types.h>
 #include <sys/sysctl.h>         
-
-/******************************************************************
- * Utilities
- */
 
 #define MIN(a, b) ({                            \
         __typeof__(a) __a = (a);                \
@@ -111,8 +105,7 @@ char *read_all(const char *path)
 
 int cpuset_max(const char *cpuset)
 {
-        // Since all we care about is the max, we can cut a lot of
-        // corners
+
         int max = 0;
         const char *p = cpuset;
         while (*p) {
@@ -139,10 +132,6 @@ uint64_t time_usec(void)
 }
 
 
-/******************************************************************
- * Stat parser
- */
-
 struct cpustat
 {
         bool online;
@@ -157,26 +146,22 @@ struct cpustats
         struct cpustat *cpus;
 };
 
-// File descriptors for /proc/stat and /proc/loadavg
+
 static int cpustats_fd, cpustats_load_fd;
-// Maximum number of CPU's this system supports
 static int cpustats_cpus;
-// A buffer large enough to read cpustats_cpus worth of /proc/stat
 static char *cpustats_buf;
 static int cpustats_buf_size;
-
 static const char *proc_path = NULL;
 
 void cpustats_findproc(void)
 {
-        // A list of paths to try to find a Linux-ish /proc mount at.
+
 #define NUM_CAND_PROC_PATHS 2
         const char *cand_proc_paths[NUM_CAND_PROC_PATHS] =
                 { "/proc",
                   "/compat/linux/proc" };
 
-        // Look for a "stat" file as an indicator that we have a Linuxy procfs
-        // available as opposed to some other procfs that has no "stat" file.
+
         int i;
         for (i=0; i<NUM_CAND_PROC_PATHS; i++) {
                 int proc_fd;
@@ -208,15 +193,11 @@ void cpustats_init(void)
 {
         cpustats_findproc();
 
-        // Find the maximum number of CPU's we'll need
-
         char *poss = read_all("/sys/devices/system/cpu/possible");
         cpustats_cpus = cpuset_max(poss) + 1;
         free(poss);
-
-
-        // Allocate a big buffer to read /proc/stat in to
         cpustats_buf_size = cpustats_cpus * 128;
+
         if (!(cpustats_buf = malloc(cpustats_buf_size)))
                 epanic("allocating cpustats file buffer");
 }
@@ -236,7 +217,7 @@ struct cpustats* cpustats_alloc(void)
 {
         struct cpustats *res = malloc(sizeof *res);
         if (!res)
-                epanic("allocating cpustats");
+        	epanic("allocating cpustats");
         memset(res, 0, sizeof *res);
         res->cpus = malloc(cpustats_cpus * sizeof *res->cpus);
         if (!res->cpus)
@@ -247,10 +228,6 @@ struct cpustats* cpustats_alloc(void)
 
 void cpustats_read(struct cpustats *out)
 {
-        // On kernels prior to 2.6.37, this can take a long time on
-        // large systems because updating IRQ counts is slow.  See
-        //   https://lkml.org/lkml/2010/9/29/259
-
         int i;
         for (i = 0; i < cpustats_cpus; i++)
                 out->cpus[i].online = false;
@@ -268,7 +245,7 @@ void cpustats_read(struct cpustats *out)
                 struct cpustat *st;
                 int cpu = -1;
                 if (*pos == ' ') {
-                        // Aggregate line
+
                         st = &out->avg;
                 } else if (isdigit(*pos)) {
                         cpu = strtol(pos, &pos, 10);
@@ -279,8 +256,7 @@ void cpustats_read(struct cpustats *out)
                         goto next;
                 }
 
-                // Earlier versions of Linux only reported user, nice,
-                // sys, and idle.
+
                 st->iowait = st->irq = st->softirq = 0;
                 unsigned long long toss;
                 if (sscanf(pos, " %llu %llu %llu %llu %llu %llu %llu",
@@ -294,7 +270,6 @@ void cpustats_read(struct cpustats *out)
                         out->max = cpu;
 
         next:
-                // Go to the next line
                 while (*pos && *pos != '\n')
                         pos++;
                 if (*pos) pos++;
@@ -337,7 +312,7 @@ void cpustats_subtract(struct cpustats *out,
         }
 }
 
-// Test if `a' and `b' have the same set of online CPU's.
+
 bool cpustats_sets_equal(const struct cpustats *a, const struct cpustats *b)
 {
         if (a->max != b->max || a->online != b->online)
@@ -350,9 +325,6 @@ bool cpustats_sets_equal(const struct cpustats *a, const struct cpustats *b)
         return true;
 }
 
-/******************************************************************
- * Terminal
- */
 
 static sig_atomic_t term_need_resize;
 static struct termios term_init_termios;
@@ -367,12 +339,12 @@ static void term_reset(void)
 {
         if (!term_initialized)
                 return;
-        // Leave invisible mode
+
         putp(cursor_normal);
-        // Leave cursor mode
+
         putp(exit_ca_mode);
         fflush(stdout);
-        // Reset terminal modes
+
         tcsetattr(0, TCSADRAIN, &term_init_termios);
         term_initialized = false;
 }
@@ -383,7 +355,7 @@ void term_init(void)
         if (tcgetattr(0, &term_init_termios) < 0)
                 epanic("failed to get terminal attributes");
 
-        // Handle terminal resize
+
         struct sigaction act = {
                 .sa_handler = term_on_sigwinch
         };
@@ -393,12 +365,10 @@ void term_init(void)
         atexit(term_reset);
         term_initialized = true;
 
-        // Enter cursor mode
         putp(enter_ca_mode);
-        // Enter invisible mode
+
         putp(cursor_invisible);
-        // Disable echo and enter canonical (aka cbreak) mode so we
-        // get input without waiting for newline
+
         struct termios tc = term_init_termios;
         tc.c_lflag &= ~(ICANON | ECHO);
         tc.c_iflag &= ~ICRNL;
@@ -409,25 +379,17 @@ void term_init(void)
                 epanic("failed to set terminal attributes");
 }
 
-// Handle any terminal resize that has happened since the last
-// `term_init' or `term_check_resize'.  Return true if there was a
-// resize.
 bool term_check_resize(void)
 {
         if (!term_need_resize)
                 return false;
 
         term_need_resize = 0;
-        // restartterm is overkill, but appears to be the only way to
-        // get ncurses to update the terminal size when using the
-        // low-level routines.
+
         restartterm(NULL, 1, NULL);
         return true;
 }
 
-/******************************************************************
- * UI
- */
 
 static const struct ui_stat
 {
@@ -439,9 +401,7 @@ static const struct ui_stat
         FIELD(nice, COLOR_GREEN), FIELD(user, COLOR_BLUE),
         FIELD(sys, COLOR_RED), FIELD(iowait, COLOR_CYAN),
         FIELD(irq, COLOR_MAGENTA), FIELD(softirq, COLOR_YELLOW),
-        // We set the color of the sentinel stat to 0xff so we can
-        // safely refer to ui_stats[NSTATS].color as the last, "idle"
-        // segment of a bar.
+
         {NULL, 0xff, 0}
 #undef FIELD
 };
@@ -452,12 +412,7 @@ static const struct ui_stat
 // the final output routine.
 static struct ui_pane
 {
-        // start is the "length dimension" of the start of this pane
-        // (for vertical bars, the row, relative to the bottom).
-        // barpos is the first barpos that appears in this pane (for
-        // vertical bars, the column).  width is the size of this pane
-        // in the width dimension (for vertical bars, the number of
-        // columns).
+
         int start, barpos, width;
 } *     ui_panes;
 static int ui_num_panes;
@@ -466,23 +421,9 @@ static struct ui_bar
 {
         int start, width, cpu;
 } *ui_bars;
-static int ui_num_bars;
 
-// The layout of ui_display, etc is independent of final display
-// layout, hence we avoid the terms "row", "column", "x", and "y".
-// Rather, bar display is laid out as
-//
-//           len
-//           012345678 <- ui_bar_length
-//  barpos 0 |--bar--|
-//         1
-//         2 |--bar--|
-//         ^- ui_bar_width
+static int ui_num_bars;
 static int ui_bar_length, ui_bar_width;
-// ui_display, ui_fore, and ui_back are 2-D arrays that should be
-// indexed using UIXY.  ui_display stores indexes into ui_chars.
-// ui_fore and ui_back store color codes or 0xff for default
-// attributes.
 static unsigned char *ui_display, *ui_fore, *ui_back;
 #define UIXY(array, barpos, len) (array[(barpos)*ui_bar_length + (len)])
 
@@ -492,7 +433,7 @@ static bool ui_ascii;
 
 void ui_init(bool force_ascii)
 {
-        // Cell character 0 is always a space
+
         strcpy(ui_chars[0], " ");
 
 #ifdef __STDC_ISO_10646__
@@ -501,7 +442,6 @@ void ui_init(bool force_ascii)
                 return;
         }
 
-        // Encode Unicode cell characters using system locale
         char *origLocale = setlocale(LC_CTYPE, NULL);
         setlocale(LC_CTYPE, "");
 
@@ -517,7 +457,6 @@ void ui_init(bool force_ascii)
                 ui_chars[ch][len] = 0;
         }
 
-        // Restore the original locale
         setlocale(LC_CTYPE, origLocale);
 #else
         ui_ascii = true;
@@ -540,7 +479,6 @@ void ui_layout(struct cpustats *cpus)
         putp(exit_attribute_mode);
         putp(clear_screen);
 
-        // Draw key at the top
         const struct ui_stat *si;
         for (si = ui_stats; si->name; si++) {
                 putp(tiparm(set_a_background, si->color));
@@ -549,23 +487,19 @@ void ui_layout(struct cpustats *cpus)
                 printf(" %s ", si->name);
         }
 
-        // Create one pane by default
         ui_init_panes(1);
         ui_panes[0].barpos = 0;
 
-        // Create bar info
         free(ui_bars);
         ui_num_bars = cpus->online + 1;
         ui_bars = malloc(ui_num_bars * sizeof *ui_bars);
         if (!ui_bars)
                 epanic("allocating bars");
 
-        // Create average bar
         ui_bars[0].start = 0;
         ui_bars[0].width = 3;
         ui_bars[0].cpu = -1;
 
-        // Lay out labels
         char buf[16];
         snprintf(buf, sizeof buf, "%d", cpus->max);
         int length = strlen(buf);
@@ -573,7 +507,7 @@ void ui_layout(struct cpustats *cpus)
         int w = COLS - 4;
 
         if ((length + 1) * cpus->online < w) {
-                // Lay out the labels horizontally
+
                 ui_panes[0].start = 1;
                 ui_bar_length = MAX(0, LINES - ui_panes[0].start - 2);
                 label_len = 1;
@@ -588,17 +522,16 @@ void ui_layout(struct cpustats *cpus)
                         }
                 }
         } else {
-                // Lay out the labels vertically
                 int pad = 0, count = cpus->online;
                 ui_panes[0].start = length;
                 ui_bar_length = MAX(0, LINES - ui_panes[0].start - 2);
                 label_len = length;
 
                 if (cpus->online * 2 < w) {
-                        // We have space for padding
+
                         pad = 1;
                 } else if (cpus->online >= w && COLS >= 2) {
-                        // We don't have space for all of them
+
                         int totalw = 4 + cpus->online;
                         ui_init_panes((totalw + COLS - 2) / (COLS - 1));
                         int plength = (LINES - 2) / ui_num_panes;
@@ -622,7 +555,6 @@ void ui_layout(struct cpustats *cpus)
                 }
         }
 
-        // Allocate bar display buffers
         free(ui_display);
         free(ui_fore);
         free(ui_back);
@@ -635,16 +567,14 @@ void ui_layout(struct cpustats *cpus)
                 epanic("allocating background buffer");
 
         if (ui_ascii) {
-                // ui_display and ui_fore don't change in ASCII mode
+
                 memset(ui_display, 0, ui_bar_length * ui_bar_width);
                 memset(ui_fore, 0xff, ui_bar_length * ui_bar_width);
         }
 
-        // Trim down the last pane to the right width
         ui_panes[ui_num_panes - 1].width =
                 ui_bar_width - ui_panes[ui_num_panes - 1].barpos;
 
-        // Draw labels
         char *label_buf = malloc(ui_bar_width * label_len);
         if (!label_buf)
                 epanic("allocating label buffer");
@@ -711,20 +641,12 @@ void ui_compute_bars(struct cpustats *delta)
                 struct cpustat *cpu = ui_bars[bar].cpu == -1 ? &delta->avg :
                         &delta->cpus[ui_bars[bar].cpu];
 
-                // Calculate cut-offs between segments.  We divide
-                // each display cell into `subcells' steps so we can
-                // use integer math.
                 enum { subcells = 256 };
-                // Values in delta are from 0 to `scale'.  For per-CPU
-                // bars this is just the real time, but for the
-                // average bar, it's multiplied by the number of
-                // online CPU's.
+
                 int scale = delta->real;
                 if (ui_bars[bar].cpu == -1)
                         scale *= delta->online;
-                // To simplify the code, we include one additional
-                // cutoff fixed at the very top of the bar so we can
-                // treat the empty region above the bar as a segment.
+
                 int cutoff[NSTATS + 1];
                 unsigned long long cumm = 0;
                 for (i = 0; i < NSTATS; i++) {
@@ -734,19 +656,16 @@ void ui_compute_bars(struct cpustats *delta)
                 }
                 cutoff[NSTATS] = ui_bar_length * subcells;
 
-                // Construct bar cells
                 int len, stat;
                 for (len = stat = 0; len < ui_bar_length && stat < NSTATS; len++) {
                         int lo = len * subcells, hi = (len + 1) * subcells;
                         if (cutoff[stat] >= hi) {
-                                // Cell is entirely covered
+
                                 UIXY(ui_back, barpos, len) =
                                         ui_stats[stat].color;
                                 continue;
                         }
 
-                        // Find the two segments the cover this cell
-                        // the most
                         int topStat[2] = {0, 0};
                         int topVal[2] = {-1, -1};
                         int val, prev = lo;
@@ -770,27 +689,22 @@ void ui_compute_bars(struct cpustats *delta)
                                       topVal[0], topVal[1]);
 
                         if (ui_ascii) {
-                                // We only care about the biggest
-                                // cover
+
                                 UIXY(ui_back, barpos, len) =
                                         ui_stats[topStat[0]].color;
                                 continue;
                         }
 
-                        // Order the segments by stat so we put the
-                        // earlier stat on the bottom
+
                         if (topStat[0] > topStat[1]) {
                                 SWAP(topStat[0], topStat[1]);
                                 SWAP(topVal[0], topVal[1]);
                         }
 
-                        // Re-scale and choose a split
                         int cell = topVal[0] * NCHARS / (topVal[0] + topVal[1]);
 
-                        // Fill the cell
                         if (cell == NCHARS - 1) {
-                                // We leave this as a space, which
-                                // means the color roles are reversed
+
                                 UIXY(ui_back, barpos, len) =
                                         ui_stats[topStat[0]].color;
                         } else {
@@ -802,7 +716,6 @@ void ui_compute_bars(struct cpustats *delta)
                         }
                 }
 
-                // Copy across bar length
                 for (i = 1; i < ui_bars[bar].width; ++i) {
                         memcpy(&UIXY(ui_display, barpos+i, 0),
                                &UIXY(ui_display, barpos, 0), ui_bar_length);
@@ -821,8 +734,6 @@ static void ui_show_pane(struct ui_pane *pane)
         for (row = 0; row < ui_bar_length; row++) {
                 putp(tiparm(cursor_address, LINES - pane->start - row - 1, 0));
 
-                // What's the width of this row?  Beyond this, we can
-                // just clear the line.
                 int endCol = 0;
                 for (col = pane->barpos; col < pane->barpos + pane->width;
                      col++) {
@@ -836,12 +747,9 @@ static void ui_show_pane(struct ui_pane *pane)
                         int back = UIXY(ui_back, col, row);
                         int fore = UIXY(ui_fore, col, row);
 
-                        // If it's a space, we don't care what the
-                        // foreground color is.
                         if (ui_chars[cell][0] == ' ' && lastFore != -1)
                                 fore = lastFore;
 
-                        // Set attributes
                         if (lastBack != back || lastFore != fore) {
                                 if (back == 0xff || fore == 0xff) {
                                         putp(exit_attribute_mode);
@@ -860,7 +768,6 @@ static void ui_show_pane(struct ui_pane *pane)
                         fputs(ui_chars[cell], stdout);
                 }
 
-                // Clear to the end of the line
                 if (endCol < pane->barpos + pane->width) {
                         if (lastBack != 0xff || lastFore != 0xff) {
                                 putp(exit_attribute_mode);
@@ -878,16 +785,14 @@ void ui_show_bars(void)
                 ui_show_pane(&ui_panes[pane]);
 }
 
-/******************************************************************
- * Main
- */
-
 static sig_atomic_t need_exit;
 
 void on_sigint(int sig)
 {
         need_exit = 1;
 }
+
+
 
 int main(int argc, char **argv)
 {
@@ -956,7 +861,7 @@ int main(int argc, char **argv)
         ui_layout(prevLayout);
         fflush(stdout);
         while (!need_exit) {
-                // Sleep or take input
+
                 struct pollfd pollfd = {
                         .fd = 0,
                         .events = POLLIN
@@ -971,15 +876,14 @@ int main(int argc, char **argv)
                                 break;
                 }
 
-                // Get new statistics
+
                 cpustats_read(after);
                 cpustats_subtract(delta, after, before);
 
-                // Recompute the layout if necessary
+
                 if (term_check_resize() || !cpustats_sets_equal(delta, prevLayout))
                         ui_layout(delta);
 
-                // Show the load average
                 float loadavg[3];
                 cpustats_loadavg(loadavg);
                 ui_show_load(loadavg);
@@ -989,7 +893,6 @@ int main(int argc, char **argv)
                         ui_show_bars();
                 }
 
-                // Done updating UI
                 fflush(stdout);
 
                 SWAP(before, after);
