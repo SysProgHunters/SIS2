@@ -407,9 +407,6 @@ static const struct ui_stat
 };
 #define NSTATS (sizeof(ui_stats)/sizeof(ui_stats[0]) - 1)
 
-// If we have too many bars to fit on the screen, we divide the screen
-// into "panes".  Wrapping the display into these panes is handled by
-// the final output routine.
 static struct ui_pane
 {
 
@@ -431,8 +428,9 @@ static unsigned char *ui_display, *ui_fore, *ui_back;
 static char ui_chars[NCHARS][MB_LEN_MAX];
 static bool ui_ascii;
 
-void ui_init(bool force_ascii)
+void ui_init()
 {
+        bool force_ascii = false;
 
         strcpy(ui_chars[0], " ");
 
@@ -629,7 +627,7 @@ void ui_show_load(float load[3])
 void ui_compute_bars(struct cpustats *delta)
 {
         if (!ui_ascii) {
-                // ui_display and ui_fore are only used in Unicode mode
+
                 memset(ui_display, 0, ui_bar_length * ui_bar_width);
                 memset(ui_fore, 0xff, ui_bar_length * ui_bar_width);
         }
@@ -793,54 +791,11 @@ void on_sigint(int sig)
 }
 
 
-
 int main(int argc, char **argv)
 {
-        bool force_ascii = false;
         int delay = 500;
 
         int opt;
-        while ((opt = getopt(argc, argv, "ad:h")) != -1) {
-                switch (opt) {
-                case 'a':
-                        force_ascii = true;
-                        break;
-                case 'd':
-                {
-                        char *end;
-                        float val = strtof(optarg, &end);
-                        if (*end) {
-                                fprintf(stderr, "Delay argument (-d) requires "
-                                        "a number\n");
-                                exit(2);
-                        }
-                        delay = 1000 * val;
-                        break;
-                }
-                default:
-                        fprintf(stderr, "Usage: %s [-a] [-d delay]\n", argv[0]);
-                        if (opt == 'h') {
-                                fprintf(stderr,
-                                        "\n"
-                                        "Display CPU usage as a bar chart.\n"
-                                        "\n"
-                                        "Options:\n"
-                                        "  -a       Use ASCII-only bars (instead of Unicode)\n"
-                                        "  -d SECS  Specify delay between updates (decimals accepted)\n"
-                                        "\n"
-                                        "If your bars look funky, use -a or specify LANG=C.\n"
-                                        "\n"
-                                        "For kernels prior to 2.6.37, using a small delay on a large system can\n"
-                                        "induce significant system time overhead.\n");
-                                exit(0);
-                        }
-                        exit(2);
-                }
-        }
-        if (optind < argc) {
-                fprintf(stderr, "Unexpected arguments\n");
-                exit(2);
-        }
 
         struct sigaction sa = {
                 .sa_handler = on_sigint
@@ -849,7 +804,7 @@ int main(int argc, char **argv)
 
         cpustats_init();
         term_init();
-        ui_init(force_ascii);
+        ui_init();
 
         struct cpustats *before = cpustats_alloc(),
                 *after = cpustats_alloc(),
