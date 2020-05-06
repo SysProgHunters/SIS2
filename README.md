@@ -16,7 +16,7 @@ $ git clone https://github.com/SysProgHunters/SIS2
 
 ### Building
 
-You should go the directory where folder SIS2 is cloned.
+You should go to the directory where folder SIS2 is cloned.
 
 Use following command to build runnable file.
 
